@@ -21,27 +21,39 @@ Train a small LLM on a CPU-only Thinkpad T480 (32GB RAM, no GPU) using Karpathy'
 
 ## Progress
 
-### Completed
+### Completed (T480 CPU)
 - [x] Cloned nanochat repo
 - [x] Installed dependencies (`uv sync --extra cpu`)
 - [x] Created `runs/runcpu_t480.sh` with conservative settings for CPU
 - [x] Trained tokenizer on 100M chars (~5 sec)
 - [x] Installed setuptools (required for PyTorch CPU codegen)
-- [ ] Base training (currently running)
 
-### In Progress
-- Base model pretraining with:
-  - depth=4, head-dim=64, max-seq-len=256
-  - device-batch-size=8, total-batch-size=4096
-  - num-iterations=2000
-  - ~36M parameters
+### Completed (Work PC - RTX 2060)
+- [x] Base training (depth=6, 2000 iterations, ~13.5 min)
+  - Loss: ~10 → 4.38, val bpb: 1.39
+  - Samples show English structure but very repetitive — model is undertrained
+  - Peak VRAM: 2770 MiB (plenty of headroom)
+- [x] base_eval ran — CORE metric: -0.02 (near random, expected for small model)
+- [x] SFT ran but **failed** — loss went NaN at step 7
 
-### Pending
-- [ ] Base training completes
-- [ ] Run base_eval to check model quality
-- [ ] SFT (Supervised Fine-Tuning) for assistant behavior
-- [ ] Test chat_cli with the model
-- [ ] Optional: Try on work PC with RTX 2060 for larger model
+### Known Issues Fixed
+- KV cache dtype mismatch on pre-Ampere GPUs (fixed in engine.py)
+- Python.h missing — need `pyenv install 3.10` (system python3.10 has no dev headers)
+- SFT NaN: `chat_sft.py` doesn't scale LRs for small batch sizes like `base_train.py` does.
+  The base_train scales by `√(batch_size/524288)` but chat_sft uses raw unscaled LRs.
+  Workaround: pass explicit `--embedding-lr`, `--unembedding-lr`, `--matrix-lr` in run scripts.
+
+### Next Steps (next session)
+1. **Re-run SFT only** (base checkpoint at step 2000 is fine, no need to retrain):
+   ```bash
+   source .venv/bin/activate
+   python -m scripts.chat_sft \
+       --max-seq-len=512 --device-batch-size=8 --total-batch-size=8192 \
+       --embedding-lr=0.0375 --unembedding-lr=0.001 --matrix-lr=0.0025 \
+       --eval-every=200 --eval-tokens=262144 --num-iterations=500 --run=dummy
+   ```
+2. **Test chat**: `python -m scripts.chat_cli -p "What is the capital of France?"`
+3. **If quality is poor**, try the ambitious run: `bash runs/rungpu_2060_long.sh`
 
 ## Model Architecture (depth=4)
 ```
@@ -60,13 +72,12 @@ Total params: ~36.7M
 uv sync --extra cpu
 bash runs/runcpu_t480.sh
 
-# Work PC (GPU)
+# Work PC (GPU) - standard run
 uv sync --extra gpu
-python -m scripts.base_train --depth=6 --head-dim=64 --max-seq-len=512 \
-    --device-batch-size=16 --total-batch-size=8192 --num-iterations=2000 --run=test
+bash runs/rungpu_2060.sh
 
-# Test text completion (after base training)
-python -m scripts.chat_cli -p "Once upon a time"
+# Work PC (GPU) - ambitious longer run
+bash runs/rungpu_2060_long.sh
 
 # Test assistant mode (after SFT)
 python -m scripts.chat_cli -p "What is the capital of France?"

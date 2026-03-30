@@ -45,10 +45,15 @@ python -m scripts.base_eval --device-batch-size=4 --split-tokens=16384 --max-per
 
 # SFT (more iterations for the larger model)
 curl -L -o $NANOCHAT_BASE_DIR/identity_conversations.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+# LRs scaled by sqrt(16384/524288) = 0.177 to match batch size
+# (chat_sft doesn't auto-scale like base_train does)
 python -m scripts.chat_sft \
     --max-seq-len=512 \
     --device-batch-size=8 \
     --total-batch-size=16384 \
+    --embedding-lr=0.053 \
+    --unembedding-lr=0.0014 \
+    --matrix-lr=0.0035 \
     --eval-every=200 \
     --eval-tokens=262144 \
     --num-iterations=1000 \
