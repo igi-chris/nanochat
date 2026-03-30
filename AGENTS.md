@@ -72,6 +72,24 @@ python -m scripts.chat_cli -p "Once upon a time"
 python -m scripts.chat_cli -p "What is the capital of France?"
 ```
 
+## Ambitious Run (RTX 2060 - longer training)
+
+Observed during current run (depth=6, device-batch-size=8):
+- VRAM: 4.3/6.0 GB (1.7 GB headroom)
+- GPU utilisation: 94%
+- Temperature: 85°C (near throttle point ~88°C, monitor on longer runs)
+- System RAM: 13.8/15.8 GB (87% - fairly tight)
+
+Suggested settings for a longer, higher-quality run:
+- **depth=8** — use the VRAM headroom for more layers (~100M params)
+- **device-batch-size=8** — keep as-is, VRAM is tight for larger model
+- **max-seq-len=512** — keep as-is (longer would blow VRAM with depth=8)
+- **total-batch-size=16384** — more gradient accumulation for stability
+- **num-iterations=5000** — longer training for better convergence
+- **Tokenizer**: train on full 2B chars (`--max-chars=2000000000`) for better vocab
+- Estimated time: ~45-60 min base training
+- If depth=8 OOMs, fall back to depth=6 with device-batch-size=16
+
 ## Notes
 - Base model = text completion only (not assistant-like)
 - SFT step required for assistant behavior
