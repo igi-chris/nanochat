@@ -13,11 +13,11 @@ Train a small LLM on a CPU-only Thinkpad T480 (32GB RAM, no GPU) using Karpathy'
 - ~36M params, expect 1-2+ hours training
 
 ### Work PC (Alternative - GPU)
-- RTX 2060 (8GB VRAM), 16GB RAM
+- RTX 2060 (6GB VRAM), 16GB RAM
 - Use `uv sync --extra gpu`
-- Can use larger model: depth=6-8, max-seq-len=512
-- device-batch-size=16-32 should fit in 8GB VRAM
-- ~50-100M params, much faster training
+- Use `runs/rungpu_2060.sh`
+- Settings: depth=6, max-seq-len=512, device-batch-size=8
+- ~55M params, much faster training (~15-30 min)
 
 ## Progress
 
